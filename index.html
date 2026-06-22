@@ -157,6 +157,23 @@
   .lg{display:flex;align-items:center;gap:4px}
   .lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .stpop{font-size:13px;font-weight:700;color:#16202e}
+
+  /* ── 모달 (TravelTime 키 설정) ── */
+  .modal{position:absolute;inset:0;z-index:2000;background:rgba(8,14,26,.55);display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+  .modal.show{display:flex}
+  .card{background:var(--card);border-radius:20px;max-width:460px;width:100%;padding:22px;box-shadow:var(--shadow);max-height:88vh;overflow:auto}
+  .card h2{margin:0 0 6px;font-size:19px}
+  .card p{font-size:13.5px;color:var(--sub);line-height:1.6;margin:8px 0}
+  .card ol{font-size:13px;color:var(--sub);line-height:1.7;padding-left:20px;margin:10px 0}
+  .card ol li{margin-bottom:7px}
+  .card ol b{color:var(--ink)}
+  .card label.fl{display:block;font-size:12px;font-weight:700;color:var(--sub);margin:10px 2px 4px}
+  .card input[type=text]{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--seg-bg);color:var(--ink);font-size:15px;outline:none}
+  .card input[type=text]:focus{border-color:var(--accent)}
+  .card .btn{width:100%;justify-content:center;padding:14px;margin-top:14px}
+  .card .row2{display:flex;gap:8px;margin-top:8px}
+  .card .row2 .btn{margin-top:0}
+  .card .linkbtn{display:inline-block;color:var(--accent);font-size:13px;text-decoration:none;font-weight:600;margin-top:8px}
 </style>
 </head>
 <body>
@@ -174,6 +191,7 @@
     <a class="iconbtn moa-btn" href="https://nsaosulfate.github.io/moa/" data-i18n-title="moa" data-i18n-aria="moa" title="Back to Moa" aria-label="Back to Moa">◈</a>
     <button class="iconbtn" id="langBtn" title="Language">한</button>
     <button class="iconbtn" id="darkBtn" title="Dark mode">🌙</button>
+    <button class="iconbtn" id="keyBtn" data-i18n-title="tt_setup" title="Accurate mode (TravelTime)">⚙️</button>
   </header>
 
   <div class="sheet" id="sheet">
@@ -246,6 +264,16 @@
       </div>
 
       <div class="row" style="border-top:1px solid var(--line)">
+        <div><label data-i18n="ttmode">Accurate mode</label><div class="desc" data-i18n="ttmode_d">Real timetable isochrone (TravelTime)</div></div>
+        <label class="switch"><input type="checkbox" id="ttmode"><span></span></label>
+      </div>
+
+      <div class="row" id="ttKeyRow" style="display:none">
+        <div><label data-i18n="ttkey">TravelTime key</label><div class="desc" data-i18n="ttkey_d">App ID & API key (this device only)</div></div>
+        <button class="btn ghost" id="ttKeyBtn" style="padding:8px 14px;font-size:13px" data-i18n="change">Change</button>
+      </div>
+
+      <div class="row" style="border-top:1px solid var(--line)">
         <div><label data-i18n="bandedit">Bands (min)</label><div class="desc" data-i18n="bandedit_d">Set the 3 ranges</div></div>
         <div style="display:flex;gap:6px">
           <input type="text" inputmode="numeric" id="m0" value="30" style="width:42px;text-align:center;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--seg-bg);color:var(--ink);font-weight:700">
@@ -260,6 +288,29 @@
     </details>
   </div>
 
+  <!-- TravelTime 키 설정 모달 -->
+  <div class="modal" id="keyModal">
+    <div class="card">
+      <h2 data-i18n="tt_title">Accurate mode · TravelTime</h2>
+      <p data-i18n="tt_intro">Draw a <b>real timetable-based</b> public-transport isochrone. Paste your free TravelTime <b>Application ID</b> and <b>API Key</b> — they are stored on this device only, never uploaded.</p>
+      <ol>
+        <li><a class="linkbtn" href="https://account.traveltime.com/" target="_blank" rel="noopener">account.traveltime.com</a> <span data-i18n="tt_s1">— sign up for a free account</span></li>
+        <li><span data-i18n="tt_s2">Copy your</span> <b>Application ID</b> <span data-i18n="tt_s2b">and</span> <b>API Key</b></li>
+        <li><span data-i18n="tt_s3">Paste them below and save</span></li>
+      </ol>
+      <label class="fl" data-i18n="tt_appid">Application ID</label>
+      <input type="text" id="ttAppId" placeholder="e.g. 1a2b3c4d" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <label class="fl" data-i18n="tt_apikey">API Key</label>
+      <input type="text" id="ttApiKey" placeholder="e.g. a1b2c3d4e5f6..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="btn" id="ttSave"><span data-i18n="tt_save">Save & enable</span></button>
+      <div class="row2">
+        <button class="btn ghost" id="ttClear" data-i18n="tt_clear">Remove key</button>
+        <button class="btn ghost" id="ttClose" data-i18n="tt_close">Close</button>
+      </div>
+      <a class="linkbtn" href="https://docs.traveltime.com/api/start/isochrones" target="_blank" rel="noopener" data-i18n="tt_doc">TravelTime isochrone docs →</a>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script src="network-data.js"></script>
@@ -268,6 +319,7 @@
     "use strict";
     var LS = window.localStorage;
     var DARK_K="hub-theme", LANG_K="mel_lang", SET_K="mel_settings", ORI_K="mel_origin";
+    var TT_APP_K="mel_tt_appid", TT_KEY_K="mel_tt_key";
 
     /* ───── i18n ───── */
     var I18N = {
@@ -281,7 +333,15 @@
         showdots:"Show stations", showdots_d:"Dot the reachable stations", bandedit:"Bands (min)", bandedit_d:"Set the 3 ranges",
         disclaimer:'※ An <b>estimate</b> — timetables, frequencies and waiting are not included. Based on station-to-station times; use as a rough commute guide only.',
         t_searching:"Searching…", t_noaddr:"No results — try a suburb or landmark", t_geoerr:"Search failed — check your connection", t_calc:"Computing…",
-        t_done:"min reach drawn", t_setorigin:"Set a start point first", reach_in:"~", reach_unit:" min" },
+        t_done:"min reach drawn", t_setorigin:"Set a start point first", reach_in:"~", reach_unit:" min",
+        tt_setup:"Accurate mode (TravelTime)",
+        ttmode:"Accurate mode", ttmode_d:"Real timetable isochrone (TravelTime)",
+        ttkey:"TravelTime key", ttkey_d:"App ID & API key (this device only)", change:"Change",
+        tt_title:"Accurate mode · TravelTime",
+        tt_intro:"Draw a <b>real timetable-based</b> public-transport isochrone. Paste your free TravelTime <b>Application ID</b> and <b>API Key</b> — stored on this device only, never uploaded.",
+        tt_s1:"— sign up for a free account", tt_s2:"Copy your", tt_s2b:"and", tt_s3:"Paste them below and save",
+        tt_appid:"Application ID", tt_apikey:"API Key", tt_save:"Save & enable", tt_clear:"Remove key", tt_close:"Close", tt_doc:"TravelTime isochrone docs →",
+        tt_fetching:"Fetching isochrone…", tt_drawn:"Isochrone drawn ✓", tt_fail:"TravelTime failed — check key / quota", tt_needkey:"Enter your TravelTime key first", tt_saved:"Saved ✓ — accurate mode on", tt_removed:"Key removed", tt_dep:"Weekday 8am departure" },
       ko:{ title:"멜버른 통근권", tag:"기차로 닿는 통근 가능 범위", addr_ph:"주소·지역 검색 (예: Flinders St, Carlton)",
         search:"검색", no_origin:"지도를 탭하거나 주소를 검색해 출발지를 지정하세요", reachable:"도달권", moa:"모아로 돌아가기",
         lg_station:"도달역", lg_walk:"도보권", lg_bus:"버스·트램 포함", minU:"분", kmh:"㎞/h",
@@ -292,7 +352,15 @@
         showdots:"도달역 표시", showdots_d:"도달 가능한 역에 점 찍기", bandedit:"시간대(분)", bandedit_d:"3개 구간 직접 입력",
         disclaimer:'※ 실제 시간표·배차·대기시간은 반영되지 않은 <b>추정치</b>입니다. 역간 소요시간 기준이며 통근 범위 가늠용으로만 쓰세요.',
         t_searching:"검색 중…", t_noaddr:"검색 결과가 없어요 — 지역명·랜드마크로 시도", t_geoerr:"검색 실패 — 인터넷 연결 확인", t_calc:"계산 중…",
-        t_done:"분 안에 닿는 범위", t_setorigin:"먼저 출발지를 지정하세요", reach_in:"약 ", reach_unit:"분" }
+        t_done:"분 안에 닿는 범위", t_setorigin:"먼저 출발지를 지정하세요", reach_in:"약 ", reach_unit:"분",
+        tt_setup:"정확 모드 (TravelTime)",
+        ttmode:"정확 모드", ttmode_d:"실제 시간표 기반 등시권 (TravelTime)",
+        ttkey:"TravelTime 키", ttkey_d:"App ID·API 키 (이 기기에만 저장)", change:"변경",
+        tt_title:"정확 모드 · TravelTime",
+        tt_intro:"<b>실제 시간표 기반</b> 대중교통 등시권을 그립니다. 무료 TravelTime <b>Application ID</b>와 <b>API Key</b>를 붙여넣으세요 — 이 기기에만 저장되고 어디에도 업로드되지 않아요.",
+        tt_s1:"— 무료 계정 가입", tt_s2:"복사하세요:", tt_s2b:"·", tt_s3:"아래에 붙여넣고 저장",
+        tt_appid:"Application ID", tt_apikey:"API Key", tt_save:"저장하고 켜기", tt_clear:"키 삭제", tt_close:"닫기", tt_doc:"TravelTime 등시권 문서 →",
+        tt_fetching:"등시권 받는 중…", tt_drawn:"등시권 표시 ✓", tt_fail:"TravelTime 실패 — 키/할당량 확인", tt_needkey:"먼저 TravelTime 키를 입력하세요", tt_saved:"저장됨 ✓ 정확 모드 켜짐", tt_removed:"키를 삭제했어요", tt_dep:"평일 오전 8시 출발 기준" }
     };
     var lang = LS.getItem(LANG_K) || (navigator.language && navigator.language.toLowerCase().indexOf("ko")===0 ? "ko" : "en");
     function T(k){ return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
@@ -314,7 +382,7 @@
     function $(id){return document.getElementById(id);}
 
     /* ───── 설정 상태 ───── */
-    var S = { walk:4.5, transfer:5, maxwalk:15, dots:true, bus:false, busSpeed:16, busWait:6, bands:[30,45,60], on:[false,true,false] };
+    var S = { walk:4.5, transfer:5, maxwalk:15, dots:true, bus:false, busSpeed:16, busWait:6, bands:[30,45,60], on:[false,true,false], tt:false };
     try{ var saved=JSON.parse(LS.getItem(SET_K)); if(saved){ S=Object.assign(S,saved);} }catch(e){}
     function saveSet(){ LS.setItem(SET_K, JSON.stringify(S)); }
 
@@ -408,7 +476,8 @@
         attr:'&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }
     };
     var map=null, tileLayer=null, marker=null;
-    var areaLayer=null, dotLayer=null;
+    var areaLayer=null, dotLayer=null, ttLayer=null;
+    var ttCache=new Map();
     var lastArrival=null, lastOrigin=null;
     var MEL=[-37.8170,144.9540];
 
@@ -424,14 +493,102 @@
 
     function clearArea(){ if(areaLayer){ areaLayer.clearLayers(); } }
     function clearDots(){ if(dotLayer){ dotLayer.clearLayers(); } }
+    function clearTT(){ if(ttLayer){ ttLayer.clearLayers(); } }
+    function hasCreds(){ return !!(LS.getItem(TT_APP_K) && LS.getItem(TT_KEY_K)); }
+    function ttKey(o,tt){ return o[0].toFixed(5)+","+o[1].toFixed(5)+","+tt; }
 
     var BANDCOLORS=["--green","--amber","--red"];
 
+    function drawDots(){
+      if(!S.dots||!lastArrival) return;
+      var selT=0; for(var si=0;si<3;si++){ if(S.on[si]&&S.bands[si]>selT) selT=S.bands[si]; }
+      if(!selT) selT=Math.max.apply(null,S.bands);
+      var COLS=[cssVar(BANDCOLORS[0]),cssVar(BANDCOLORS[1]),cssVar(BANDCOLORS[2])];
+      lastArrival.forEach(function(a,name){
+        if(a>selT) return;
+        var c=COORD.get(name); if(!c) return;
+        var bi = a<=S.bands[0]?0 : a<=S.bands[1]?1 : 2;
+        var col=COLS[bi];
+        var mk=L.circleMarker([c[0],c[1]], { radius:5, color:"#fff", weight:1, fillColor:col, fillOpacity:.95 });
+        mk.bindPopup('<div class="stpop">'+name+' · '+T("reach_in")+Math.round(a)+T("reach_unit")+'</div>');
+        mk.addTo(dotLayer);
+      });
+    }
+
+    /* ───── TravelTime 정확 모드 (실제 시간표 등시권) ───── */
+    function depTimeISO(){   // 다음 평일 오전 8시(멜버른) → UTC ISO
+      function melParts(d){ return new Date(d.toLocaleString("en-US",{timeZone:"Australia/Melbourne"})); }
+      function offMin(d){ return Math.round((melParts(d) - new Date(d.toLocaleString("en-US",{timeZone:"UTC"})))/60000); }
+      var mp=melParts(new Date());
+      var y=mp.getFullYear(), mo=mp.getMonth(), d=mp.getDate();
+      if(mp.getHours()>=8) d++;                       // 오늘 8시 지났으면 다음날
+      var guess=new Date(Date.UTC(y,mo,d,8,0,0));
+      var dep=new Date(guess.getTime()-offMin(guess)*60000);
+      var wd=melParts(dep).getDay();                  // 주말 건너뛰기
+      if(wd===6) dep=new Date(dep.getTime()+2*86400000);
+      else if(wd===0) dep=new Date(dep.getTime()+86400000);
+      return dep.toISOString();
+    }
+    function fetchTTMulti(lat,lng,ttArr){
+      var dep=depTimeISO();
+      var body={ departure_searches: ttArr.map(function(tt){ return {
+        id:"b"+tt, coords:{lat:lat,lng:lng}, departure_time:dep, travel_time:tt,
+        transportation:{type:"public_transport"}, level_of_detail:{scale_type:"simple",level:"medium"}
+      };}) };
+      return fetch("https://api.traveltimeapp.com/v4/time-map",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Accept":"application/geo+json",
+          "X-Application-Id":LS.getItem(TT_APP_K)||"", "X-Api-Key":LS.getItem(TT_KEY_K)||"" },
+        body:JSON.stringify(body)
+      }).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+        .then(function(fc){
+          var feats=(fc&&fc.features)||[];
+          ttArr.forEach(function(tt,i){
+            var f=null;
+            for(var j=0;j<feats.length;j++){ var pr=feats[j].properties; if(pr&&pr.search_id==="b"+tt){ f=feats[j]; break; } }
+            if(!f) f=feats[i];
+            if(f) ttCache.set(ttKey([lat,lng],tt), { type:"FeatureCollection", features:[f] });
+          });
+          return fc;
+        });
+    }
+    function drawTTCached(origin, idxs){
+      var COLS=[cssVar(BANDCOLORS[0]),cssVar(BANDCOLORS[1]),cssVar(BANDCOLORS[2])];
+      idxs.slice().sort(function(a,b){return S.bands[b]-S.bands[a];}).forEach(function(bi){
+        var gj=ttCache.get(ttKey(origin, S.bands[bi]*60)); if(!gj) return;
+        var col=COLS[bi]||cssVar("--accent");
+        L.geoJSON(gj, { style:{ color:col, weight:1.5, opacity:.85, fillColor:col, fillOpacity:.2 } }).addTo(ttLayer);
+      });
+    }
+    function fitTT(origin, idxs){
+      try{
+        var maxbi=idxs[0]; idxs.forEach(function(bi){ if(S.bands[bi]>S.bands[maxbi]) maxbi=bi; });
+        var gj=ttCache.get(ttKey(origin, S.bands[maxbi]*60)); if(!gj) return;
+        var b=L.geoJSON(gj).getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[40,40],maxZoom:14});
+      }catch(e){}
+    }
+    function drawTT(){
+      var origin=lastOrigin;
+      var idxs=[0,1,2].filter(function(i){return S.on[i];});
+      if(!idxs.length){ var mx=Math.max.apply(null,S.bands); idxs=[S.bands.indexOf(mx)]; }
+      var need=[];
+      idxs.forEach(function(bi){ var tt=S.bands[bi]*60; if(!ttCache.has(ttKey(origin,tt))) need.push(tt); });
+      drawTTCached(origin, idxs);
+      if(need.length){
+        toast('<span class="spin"></span> '+T("tt_fetching"), 8000);
+        fetchTTMulti(origin[0],origin[1],need).then(function(){
+          if(lastOrigin!==origin || !S.tt) return;
+          clearTT(); drawTTCached(origin, idxs); fitTT(origin, idxs);
+          toast(T("tt_drawn")+" · "+T("tt_dep"));
+        }).catch(function(){ toast(T("tt_fail"), 3400); });
+      }
+    }
+
     function render(){
       if(!lastArrival||!lastOrigin||!map) return;
-      clearArea(); clearDots();
+      clearArea(); clearDots(); clearTT();
+      if(S.tt && hasCreds()){ drawDots(); drawTT(); return; }
       var heat=cssVar("--accent")||"#1f7a4d";
-
       function drawLayer(Tmin, radiusFn, opacity){
         var pts=[], maxR=0;
         var orad=radiusFn(Tmin); if(orad>40){ pts.push([lastOrigin[0],lastOrigin[1],orad]); maxR=orad; }
@@ -452,21 +609,7 @@
         if(S.bus) drawLayer(Tmin, busReach, 0.06);
         drawLayer(Tmin, walkReach, 0.10);
       });
-
-      if(S.dots){
-        var selT=0; for(var si=0;si<3;si++){ if(S.on[si]&&S.bands[si]>selT) selT=S.bands[si]; }
-        if(!selT) selT=Math.max.apply(null,S.bands);
-        var COLS=[cssVar(BANDCOLORS[0]),cssVar(BANDCOLORS[1]),cssVar(BANDCOLORS[2])];
-        lastArrival.forEach(function(a,name){
-          if(a>selT) return;
-          var c=COORD.get(name); if(!c) return;
-          var bi = a<=S.bands[0]?0 : a<=S.bands[1]?1 : 2;
-          var col=COLS[bi];
-          var mk=L.circleMarker([c[0],c[1]], { radius:5, color:"#fff", weight:1, fillColor:col, fillOpacity:.95 });
-          mk.bindPopup('<div class="stpop">'+name+' · '+T("reach_in")+Math.round(a)+T("reach_unit")+'</div>');
-          mk.addTo(dotLayer);
-        });
-      }
+      drawDots();
     }
 
     function fitToReach(){
@@ -530,6 +673,7 @@
       L.control.zoom({position:"topright"}).addTo(map);
       setTiles();
       areaLayer=L.layerGroup().addTo(map);
+      ttLayer=L.layerGroup().addTo(map);
       dotLayer=L.layerGroup().addTo(map);
 
       map.on("click",function(e){ setOrigin(e.latlng.lat, e.latlng.lng, null, false); reverseGeo(e.latlng.lat, e.latlng.lng); });
@@ -582,6 +726,31 @@
       });
     });
 
+    /* ── TravelTime 정확 모드 ── */
+    function openKeyModal(){ $("ttAppId").value=LS.getItem(TT_APP_K)||""; $("ttApiKey").value=LS.getItem(TT_KEY_K)||""; $("keyModal").classList.add("show"); }
+    function closeKeyModal(){ $("keyModal").classList.remove("show"); }
+    function syncTT(){ $("ttmode").checked=S.tt; $("ttKeyRow").style.display=(S.tt||hasCreds())?"":"none"; }
+    $("keyBtn").addEventListener("click",openKeyModal);
+    $("ttKeyBtn").addEventListener("click",openKeyModal);
+    $("ttClose").addEventListener("click",closeKeyModal);
+    $("keyModal").addEventListener("click",function(e){ if(e.target===this) closeKeyModal(); });
+    $("ttSave").addEventListener("click",function(){
+      var a=$("ttAppId").value.trim(), k=$("ttApiKey").value.trim();
+      if(!a){ $("ttAppId").focus(); return; } if(!k){ $("ttApiKey").focus(); return; }
+      LS.setItem(TT_APP_K,a); LS.setItem(TT_KEY_K,k); ttCache.clear();
+      S.tt=true; saveSet(); syncTT(); closeKeyModal(); toast(T("tt_saved"));
+      if(lastOrigin) recompute(false);
+    });
+    $("ttClear").addEventListener("click",function(){
+      LS.removeItem(TT_APP_K); LS.removeItem(TT_KEY_K); ttCache.clear();
+      S.tt=false; saveSet(); syncTT(); closeKeyModal(); toast(T("tt_removed")); render();
+    });
+    $("ttmode").addEventListener("change",function(){
+      if(this.checked && !hasCreds()){ this.checked=false; openKeyModal(); return; }
+      S.tt=this.checked; saveSet(); syncTT();
+      if(lastOrigin){ if(S.tt) recompute(false); else render(); }
+    });
+
     function applyDark(d){ document.documentElement.dataset.theme=d?"dark":"light"; $("darkBtn").textContent=d?"☀️":"🌙";
       var m=document.querySelector('meta[name=theme-color]'); if(m)m.content=d?"#111219":"#f4f4f1";
       if(map){ setTiles(); render(); } }
@@ -591,6 +760,8 @@
     $("langBtn").addEventListener("click",function(){ lang=lang==="ko"?"en":"ko"; LS.setItem(LANG_K,lang); applyI18n(); if(lastArrival)render(); });
 
     /* ───── 시작 ───── */
+    if(S.tt && !hasCreds()) S.tt=false;   // 키 없으면 정확 모드 꺼둠
+    syncTT();
     applyI18n();
     if(!window.NET){ toast("Data load failed (network-data.js)"); }
     initMap();
